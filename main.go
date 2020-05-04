@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/binxio/gcloud/config"
+	"github.com/binxio/gcloudconfighelper/config"
 	"golang.org/x/oauth2/google"
 	"log"
 )

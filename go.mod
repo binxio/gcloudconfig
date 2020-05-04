@@ -1,4 +1,4 @@
-module github.com/binxio/gcloud
+module github.com/binxio/gcloudconfighelper
 
 go 1.14
 

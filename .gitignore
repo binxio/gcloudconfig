@@ -16,4 +16,4 @@ vendor/
 
 # intellij
 .idea/
-gcloud
+gcloudconfighelper
