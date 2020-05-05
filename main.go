@@ -8,7 +8,7 @@
  * and returns the google.Credentials of the current or desired
  * gcloud configuration
  */
-package main
+package gcloudconfig
 
 import (
 	"bytes"
@@ -243,4 +243,3 @@ func GetCloudSDKCredentials(name string) (*google.Credentials, error) {
 	return &credentials, nil
 }
 
-func main() {}
