@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+gcloudconfig
 
 # Test binary, built with `go test -c`
 *.test
@@ -16,4 +17,3 @@ vendor/
 
 # intellij
 .idea/
-gcloudconfighelper

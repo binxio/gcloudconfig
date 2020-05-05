@@ -1,48 +1,246 @@
+/* Wrapper around the Google Cloud SDK configuration
+ *
+ * the standard Google Cloud SDK go library does not support
+ * to use the project and account specified by the current
+ * gcloud configuration.
+ *
+ * this package wrap the `gcloud config config-helper`
+ * and returns the google.Credentials of the current or desired
+ * gcloud configuration
+ */
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
-	"github.com/binxio/gcloudconfighelper/config"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"log"
+	"os/exec"
+	"time"
 )
 
-// print the project access token and expiration date
-func printToken(credentials *google.Credentials) {
-	token, err := credentials.TokenSource.Token()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("current project %s\n", credentials.ProjectID)
-	fmt.Printf("access token    %v\n", token.AccessToken)
-	fmt.Printf("expires         %v\n", token.Expiry)
+/**
+ * the unmarshaled output of `gcloud config config-helper` with all of the
+ * documented properties.
+ */
+type Config struct {
+	Configuration struct {
+		ActiveConfiguration *string `json:"active_configuration"`
+		Properties          struct {
+			Core struct {
+				Project                       *string `json:"project"`
+				Account                       *string `json:"account"`
+				CustomCaCertsFile             *string `json:"custom_ca_certs_file"`
+				DefaultRegionalBackendService *string `json:"default_regional_backend_service"`
+				DisableColor                  *string `json:"disable_color"`
+				DisableFileLogging            *string `json:"disable_file_logging"`
+				DisableUsageReporting         *string `json:"disable_usage_reporting"`
+				LogHttp                       *string `json:"log_http"`
+				MaxLogDays                    *string `json:"MaxLogDays"`
+				PassCredentialsToGsutil       *string `json:"pass_credentials_to_gsutil"`
+				ShowStructuredLogs            *string `json:"show_structured_logs"`
+				TraceToken                    *string `json:"trace_token"`
+				UserOutputEnabled             *string `json:"user_output_enabled"`
+				Verbosity                     *string `json:"verbosity"`
+			} `json:"core"`
+			Accessibility struct {
+				ScreenReader *string `json:"screen_reader"`
+			} `json:"accessibility"`
+			App struct {
+				CloudBuildTimeout   *string `json:"cloud_build_timeout"`
+				PromoteByDefault    *string `json:"promote_by_default"`
+				StopPreviousVersion *string `json:"stop_previous_version"`
+				UseRuntimeBuilders  *string `json:"use_runtime_builders"`
+			} `json:"app"`
+			Artifacts struct {
+				DisableCredentials        *string `json:"disable_credentials"`
+				ImpersonateServiceAccount *string `json:"impersonate_service_account"`
+			} `json:"artifacts"`
+			Auth struct {
+				Location   *string `json:"location"`
+				Repository *string `json:"repository"`
+			} `json:"auth"`
+			Billing struct {
+				QuotaProject *string `json:"quota_project"`
+			} `json:"billing"`
+			Builds struct {
+				UseKaniko      *string `json:"use_kaniko"`
+				KanikoCacheTTL *string `json:"kaniko_cache_ttl"`
+				Timeout        *string `json:"timeout"`
+			} `json:"builds"`
+			ComponentManager struct {
+				AdditionalRepositories *string `json:"additional_repositories"`
+				DisableUpdateCheck     *string `json:"disable_update_check"`
+			} `json:"component_manager"`
+			Composer struct {
+				Location           *string `json:"location"`
+				DisableUpdateCheck *string `json:"disable_update_check"`
+			} `json:"composer"`
+			Compute struct {
+				Region                     *string `json:"region"`
+				Zone                       *string `json:"zone"`
+				UseNewListUsableSubnetsAPI *string `json:"use_new_list_usable_subnets_api"`
+			} `json:"compute"`
+			Container struct {
+				BuildTimeout                     *string `json:"build_timeout"`
+				Cluster                          *string `json:"cluster"`
+				UseApplicationDefaultCredentials *string `json:"use_application_default_credentials"`
+				UseClientCertificate             *string `json:"use_client_certificate"`
+			} `json:"container"`
+			ContextAware struct {
+				UseClientCertificate *string `json:"use_client_certificate"`
+			} `json:"context_aware"`
+			Dataflow struct {
+				DisablePublicIPs *string `json:"disable_public_ips"`
+				PrintOnly        *string `json:"print_only"`
+			} `json:"dataflow"`
+			Datafusion struct {
+				Location *string `json:"location"`
+			} `json:"datafusion"`
+			Dataproc struct {
+				Region *string `json:"region"`
+			} `json:"dataproc"`
+			DeploymentManager struct {
+				GlobImports *string `json:"glob_imports"`
+			} `json:"deployment_manager"`
+			Filestore struct {
+				Zone *string `json:"zone"`
+			} `json:"filestore"`
+			Functions struct {
+				Region *string `json:"region"`
+			} `json:"functions"`
+			GameServices struct {
+				DefaultDeployment *string `json:"default_deployment"`
+				DefaultRealm      *string `json:"default_realm"`
+				Location          *string `json:"location"`
+			} `json:"game_services"`
+			GCloudignore struct {
+				Enabled *string `json:"enabled"`
+			} `json:"functions"`
+			Healthcare struct {
+				Dataset  *string `json:"dataset"`
+				Location *string `json:"location"`
+			} `json:"healthcare"`
+			Lifesciences struct {
+				Location *string `json:"location"`
+			} `json:"lifesciences"`
+			MLEngine struct {
+				LocalPython     *string `json:"local_python"`
+				PollingInterval *string `json:"polling_interval"`
+			} `json:"ml_engine"`
+			Proxy struct {
+				Address  *string `json:"address"`
+				Password *string `json:"password"`
+				Port     *string `json:"port"`
+				Rdns     *string `json:"rdns"`
+				Type     *string `json:"type"`
+				Username *string `json:"username"`
+			} `json:"proxy"`
+			Redis struct {
+				Region *string `json:"region"`
+			} `json:"redis"`
+			Run struct {
+				Cluster         *string `json:"cluster"`
+				ClusterLocation *string `json:"cluster_location"`
+				Platform        *string `json:"platform"`
+				Region          *string `json:"region"`
+			} `json:"run"`
+			SCC struct {
+				Organization *string `json:"organization"`
+			} `json:"scc"`
+			Secrets struct {
+				Locations         *string `json:"locations"`
+				ReplicationPolicy *string `json:"replication-policy"`
+			} `json:"secrets"`
+			Spanner struct {
+				Instance *string `json:"instance"`
+			} `json:"spanner"`
+			Survey struct {
+				DisablePrompts *string `json:"disable_prompts"`
+			} `json:"survey"`
+		} `json:"properties"`
+	} `json:"configuration"`
+	Credential struct {
+		AccessToken string    `json:"access_token"`
+		IDToken     string    `json:"id_token"`
+		TokenExpiry time.Time `json:"token_expiry"`
+	} `json:"credential"`
+	Sentinels struct {
+		ConfigSentinel *string `json:"config_sentinel"`
+	} `json:"sentinels"`
 }
 
-// print the select configuration properties and the credentials provided by them
-func main() {
-	name := flag.String("configuration", "", "name of the configuration to use")
-	flag.Parse()
+// returns the parsed output of the gcloud config config-helper command.
+func GetCloudSDKConfig(name string) (*Config, error) {
 
-	if !config.IsGCloudOnPath() {
-		log.Fatal("please install the Google Cloud SDK and put gcloud on the path")
-	}
+	var stdout, stderr bytes.Buffer
 
-	active, err := config.GetCloudSDKConfig(*name)
+	exe, err := exec.LookPath("gcloud")
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("glcoud not on path")
 	}
-	if s, err := json.MarshalIndent(active, "", "  "); err == nil {
-		fmt.Printf("%s\n", string(s))
+
+	var cmd *exec.Cmd
+	if name == "" {
+		cmd = exec.Command(exe, "config", "config-helper", "--format", "json")
 	} else {
-		log.Fatal(err)
+		cmd = exec.Command(exe, "config", "config-helper", "--configuration", name, "--format", "json")
 	}
 
-	credentials, err := config.GetCloudSDKCredentials(*name)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err = cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Command %s failed with %s (%s)\n", cmd.String(), err, string(stderr.Bytes()))
 	}
 
-	printToken(credentials)
+	var config Config
+	err = json.Unmarshal(stdout.Bytes(), &config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse json output of %s into configuration, %s\n", cmd.String(), err)
+	}
+
+	return &config, nil
 }
+
+/* returns the OAuth2 token if the current configuration. If it
+ * expired, GetCloudSDKConfig() will be used to refresh the token.
+ */
+func (c *Config) Token() (*oauth2.Token, error) {
+	if c.Credential.TokenExpiry.UTC().Before(time.Now().UTC()) {
+		newToken, err := GetCloudSDKConfig(*c.Configuration.ActiveConfiguration)
+		if err != nil {
+			return nil, fmt.Errorf("could not refresh token, %s", err)
+		}
+		*c = *newToken
+	}
+	return &oauth2.Token{AccessToken: c.Credential.AccessToken, Expiry: c.Credential.TokenExpiry}, nil
+}
+
+/* returns true if gcloud is on the path, otherwise false. */
+func IsGCloudOnPath() bool {
+	_, err := exec.LookPath("gcloud")
+	return err == nil
+}
+
+/*
+ * get the credentials associated with the specified gcloud
+ * configuration. If the name is "", than the current active
+ * configuration is used.
+ */
+func GetCloudSDKCredentials(name string) (*google.Credentials, error) {
+	var credentials google.Credentials
+	config, err := GetCloudSDKConfig(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.Configuration.Properties.Core.Project != nil {
+		credentials.ProjectID = *config.Configuration.Properties.Core.Project
+	}
+	credentials.TokenSource = config
+	return &credentials, nil
+}
+
+func main() {}
