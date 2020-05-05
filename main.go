@@ -172,7 +172,7 @@ type Config struct {
 }
 
 // returns the parsed output of the gcloud config config-helper command.
-func GetCloudSDKConfig(name string) (*Config, error) {
+func GetConfig(name string) (*Config, error) {
 
 	var stdout, stderr bytes.Buffer
 
@@ -209,7 +209,7 @@ func GetCloudSDKConfig(name string) (*Config, error) {
  */
 func (c *Config) Token() (*oauth2.Token, error) {
 	if c.Credential.TokenExpiry.UTC().Before(time.Now().UTC()) {
-		newToken, err := GetCloudSDKConfig(*c.Configuration.ActiveConfiguration)
+		newToken, err := GetConfig(*c.Configuration.ActiveConfiguration)
 		if err != nil {
 			return nil, fmt.Errorf("could not refresh token, %s", err)
 		}
@@ -229,9 +229,9 @@ func IsGCloudOnPath() bool {
  * configuration. If the name is "", than the current active
  * configuration is used.
  */
-func GetCloudSDKCredentials(name string) (*google.Credentials, error) {
+func GetCredentials(name string) (*google.Credentials, error) {
 	var credentials google.Credentials
-	config, err := GetCloudSDKConfig(name)
+	config, err := GetConfig(name)
 	if err != nil {
 		return nil, err
 	}
