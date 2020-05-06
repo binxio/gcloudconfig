@@ -13,3 +13,5 @@ The implementation entirely depends on the output of `gcloud config config-helpe
   utilities to use the gcloud configuration. Oddly enough, Google also promises it to be a volatile and
   unstable interface. So if Google broke it or changed it, let me know perhaps we can fix the implementation
   of this library :-)
+
+read the blog [How to authenticate to Google Cloud Platform using the active gcloud configuration](https://binx.io/blog/2020/05/06/how-to-authenticate-to-google-cloud-platform-using-the-active-gcloud-configuration/ )
